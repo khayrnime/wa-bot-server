@@ -1,17 +1,14 @@
 {
   "name": "whatsapp-chatbot-server",
   "version": "1.0.0",
-  "description": "Simple WhatsApp Chatbot Webhook Server using Google Sheets",
-  "main": "server.js",
+  "description": "Simple WhatsApp Chatbot Webhook Server using Vercel",
+  "main": "index.js",
   "scripts": {
-    "start": "node server.js"
+    "start": "node api/index.js"
   },
   "dependencies": {
     "express": "^4.18.2",
-    "google-spreadsheet": "^3.3.0",
-    "dotenv": "^16.3.1"
-  },
-  "engines": {
-    "node": ">=18.x"
+    "body-parser": "^1.20.2",
+    "csv-parser": "^3.0.0"
   }
 }
