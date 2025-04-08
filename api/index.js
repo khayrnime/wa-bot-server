@@ -9,7 +9,7 @@ app.use(bodyParser.json());
 
 let katalogData = {};
 
-// Load data dari katalog.tsv saat server start
+// Load katalog
 function loadKatalog() {
   const katalogPath = path.join(__dirname, '..', 'katalog.tsv');
   fs.createReadStream(katalogPath)
@@ -25,7 +25,7 @@ function loadKatalog() {
     });
 }
 
-// Endpoint Webhook WhatsAuto
+// Webhook endpoint
 app.post('/', (req, res) => {
   const message = (req.body.message || '').toLowerCase().trim();
   console.log('Received:', message);
@@ -40,7 +40,7 @@ app.post('/', (req, res) => {
   res.json({ reply: responseText });
 });
 
-// Run di Vercel
+// ini WAJIB, untuk vercel:
 module.exports = app;
 
 loadKatalog();
