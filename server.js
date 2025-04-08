@@ -1,78 +1,47 @@
 const express = require('express');
-const { GoogleSpreadsheet } = require('google-spreadsheet');
-const dotenv = require('dotenv');
+const fs = require('fs');
+const csv = require('csv-parser'); // untuk baca TSV
+const bodyParser = require('body-parser');
+
 const app = express();
-dotenv.config(); // Load .env file
+app.use(bodyParser.json());
 
-const PORT = process.env.PORT || 3000;
+let products = [];
 
-// Setup Google Sheets
-const doc = new GoogleSpreadsheet(process.env.SHEET_ID);
+// Load database dari file
+fs.createReadStream('PL_KATALOG_ZONA.tsv')
+  .pipe(csv({ separator: '\t' })) // karena file TSV (tab)
+  .on('data', (row) => {
+    products.push(row);
+  })
+  .on('end', () => {
+    console.log('Database loaded!');
+  });
 
-// Middleware untuk parsing JSON
-app.use(express.json());
+// Webhook endpoint
+app.post('/message', (req, res) => {
+  const { message, sender } = req.body;
 
-// ====== FUNCTION UTAMA ======
+  console.log(`Incoming message from ${sender}: ${message}`);
 
-// Fungsi untuk ambil data dari Google Sheets
-async function ambilDataSheet() {
-  try {
-    await doc.useServiceAccountAuth({
-      client_email: process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL,
-      private_key: process.env.GOOGLE_PRIVATE_KEY.replace(/\\n/g, '\n'),
-    });
-    await doc.loadInfo(); // Load spreadsheet info
-    const sheet = doc.sheetsByIndex[0]; // Ambil sheet pertama
-    const rows = await sheet.getRows();
-    return rows.map(row => row._rawData); // Kembalikan semua data
-  } catch (err) {
-    console.error('Error ambil data sheet:', err);
-    return [];
-  }
-}
+  const found = products.find(item => item['UKURAN CUP'].toLowerCase() === message.toLowerCase());
 
-// Fungsi untuk logika membalas pesan
-async function balasPesan(message) {
-  const dataSheet = await ambilDataSheet();
-  
-  // Contoh: cari jawaban di Google Sheet
-  const jawaban = dataSheet.find(row => row[0] === message); // Asumsikan kolom pertama = pertanyaan
-  
-  if (jawaban) {
-    return `Jawaban dari sheet: ${jawaban[1]}`; // Misal kolom kedua adalah jawabannya
+  let reply;
+  if (found) {
+    reply = `📦 ${found['UKURAN CUP']}\n💵 Harga jual: Rp ${found['HPJ']}/pcs`;
   } else {
-    return "Maaf, saya tidak mengerti pertanyaan Anda.";
+    reply = 'Maaf, produk tidak ditemukan.';
   }
-}
 
-// ====== ENDPOINTS ======
-
-// Default route
-app.get('/', (req, res) => {
-  res.send('Server WhatsApp Bot Jalan 🚀');
+  // Balasan ke WA (contoh response)
+  res.json({
+    receiver: sender,
+    message: reply
+  });
 });
 
-// Endpoint untuk WhatsAuto kirim pesan (bisa /webhook atau /message.php)
-app.post(['/webhook', '/message.php'], async (req, res) => {
-  try {
-    const data = req.body;
-    console.log('Data diterima dari WhatsAuto:', data);
-
-    const message = data.message; // Ambil pesan dari body WhatsAuto
-    const reply = await balasPesan(message); // Dapatkan balasan dari fungsi di atas
-
-    // Kirim response balik ke WhatsAuto
-    res.status(200).json({
-      reply: reply,
-    });
-
-  } catch (error) {
-    console.error('Error di webhook:', error);
-    res.status(500).send('Error internal server.');
-  }
-});
-
-// Jalankan server
+// Start server
+const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-  console.log(`Server jalan di port ${PORT}`);
+  console.log(`Webhook running on port ${PORT}`);
 });
