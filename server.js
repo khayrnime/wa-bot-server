@@ -32,7 +32,11 @@ app.post('/webhook', async (req, res) => {
             }
         }
 
-        res.json({ reply: reply });
+        // 👇 Tambahin timestamp di response
+        res.json({ 
+            reply: reply,
+            timestamp: new Date().toISOString() 
+        });
     } catch (error) {
         console.error('Error:', error);
         res.status(500).send('Server Error');
